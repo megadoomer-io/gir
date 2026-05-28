@@ -13,27 +13,27 @@ if TYPE_CHECKING:
 
 class TestConfigLoad:
     def test_load_example(self, example_config: config_mod.Config) -> None:
-        assert example_config.default == "allow"
+        assert example_config.default == "abstain"
         assert len(example_config.block_bash) > 0
         assert len(example_config.block_write) > 0
         assert len(example_config.ask_bash) > 0
 
     def test_load_missing_file(self, tmp_path: Path) -> None:
         cfg = config_mod.Config.load(tmp_path / "nonexistent.json")
-        assert cfg.default == "allow"
+        assert cfg.default == "abstain"
         assert cfg.block_bash == []
 
     def test_load_malformed_json(self, tmp_path: Path) -> None:
         bad_file = tmp_path / "bad.json"
         bad_file.write_text("{invalid json")
         cfg = config_mod.Config.load(bad_file)
-        assert cfg.default == "allow"
+        assert cfg.default == "abstain"
 
     def test_load_empty_config(self, tmp_path: Path) -> None:
         empty = tmp_path / "empty.json"
         empty.write_text("{}")
         cfg = config_mod.Config.load(empty)
-        assert cfg.default == "allow"
+        assert cfg.default == "abstain"
         assert cfg.block_bash == []
 
     def test_block_bash_patterns(self, example_config: config_mod.Config) -> None:

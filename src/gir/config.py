@@ -37,7 +37,7 @@ class ContextScope:
 
 @dataclass(frozen=True)
 class Config:
-    default: str = "allow"
+    default: str = "abstain"
     log_file: str = "~/.config/gir/decisions.jsonl"
     block_bash: list[Rule] = field(default_factory=list)
     block_write: list[Rule] = field(default_factory=list)
@@ -71,7 +71,7 @@ class Config:
         assert isinstance(contexts_raw, dict)
 
         return cls(
-            default=str(data.get("default", "allow")),
+            default=str(data.get("default", "abstain")),
             log_file=str(data.get("log_file", "~/.gir/decisions.jsonl")),
             block_bash=[Rule.from_dict(r) for r in block.get("bash", [])],
             block_write=[Rule.from_dict(r) for r in block.get("write", [])],

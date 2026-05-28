@@ -22,13 +22,13 @@ class TestRmRfRoot:
         assert hook_mod.evaluate("Bash", {"command": "sudo rm -rf /"}, CFG).action == "deny"
 
     def test_allows_rm_rf_tmpdir(self) -> None:
-        assert hook_mod.evaluate("Bash", {"command": "rm -rf /tmp/build-cache"}, CFG).action == "allow"
+        assert hook_mod.evaluate("Bash", {"command": "rm -rf /tmp/build-cache"}, CFG).action == "abstain"
 
     def test_allows_rm_single_file(self) -> None:
-        assert hook_mod.evaluate("Bash", {"command": "rm /tmp/test.txt"}, CFG).action == "allow"
+        assert hook_mod.evaluate("Bash", {"command": "rm /tmp/test.txt"}, CFG).action == "abstain"
 
     def test_allows_rm_r_without_f(self) -> None:
-        assert hook_mod.evaluate("Bash", {"command": "rm -r /tmp/dir"}, CFG).action == "allow"
+        assert hook_mod.evaluate("Bash", {"command": "rm -r /tmp/dir"}, CFG).action == "abstain"
 
 
 class TestRmRfHome:
@@ -39,7 +39,7 @@ class TestRmRfHome:
         assert hook_mod.evaluate("Bash", {"command": "rm -rf ~/"}, CFG).action == "deny"
 
     def test_allows_rm_rf_home_subdir(self) -> None:
-        assert hook_mod.evaluate("Bash", {"command": "rm -rf ~/tmp/junk"}, CFG).action == "allow"
+        assert hook_mod.evaluate("Bash", {"command": "rm -rf ~/tmp/junk"}, CFG).action == "abstain"
 
 
 class TestForcePush:
@@ -53,10 +53,10 @@ class TestForcePush:
         assert hook_mod.evaluate("Bash", {"command": "git push --force-with-lease origin main"}, CFG).action == "deny"
 
     def test_allows_force_push_feature(self) -> None:
-        assert hook_mod.evaluate("Bash", {"command": "git push --force origin feat/gir"}, CFG).action == "allow"
+        assert hook_mod.evaluate("Bash", {"command": "git push --force origin feat/gir"}, CFG).action == "abstain"
 
     def test_allows_normal_push_feature(self) -> None:
-        assert hook_mod.evaluate("Bash", {"command": "git push origin feat/gir"}, CFG).action == "allow"
+        assert hook_mod.evaluate("Bash", {"command": "git push origin feat/gir"}, CFG).action == "abstain"
 
 
 class TestGitResetHard:
@@ -67,10 +67,10 @@ class TestGitResetHard:
         assert hook_mod.evaluate("Bash", {"command": "git reset --hard"}, CFG).action == "deny"
 
     def test_allows_reset_soft(self) -> None:
-        assert hook_mod.evaluate("Bash", {"command": "git reset --soft HEAD~1"}, CFG).action == "allow"
+        assert hook_mod.evaluate("Bash", {"command": "git reset --soft HEAD~1"}, CFG).action == "abstain"
 
     def test_allows_reset_mixed(self) -> None:
-        assert hook_mod.evaluate("Bash", {"command": "git reset HEAD~1"}, CFG).action == "allow"
+        assert hook_mod.evaluate("Bash", {"command": "git reset HEAD~1"}, CFG).action == "abstain"
 
 
 class TestKubectlDestructive:
@@ -84,13 +84,13 @@ class TestKubectlDestructive:
         assert hook_mod.evaluate("Bash", {"command": "kubectl drain node-1"}, CFG).action == "deny"
 
     def test_allows_delete_pod(self) -> None:
-        assert hook_mod.evaluate("Bash", {"command": "kubectl delete pod my-pod"}, CFG).action == "allow"
+        assert hook_mod.evaluate("Bash", {"command": "kubectl delete pod my-pod"}, CFG).action == "abstain"
 
     def test_allows_delete_deployment(self) -> None:
-        assert hook_mod.evaluate("Bash", {"command": "kubectl delete deployment my-app"}, CFG).action == "allow"
+        assert hook_mod.evaluate("Bash", {"command": "kubectl delete deployment my-app"}, CFG).action == "abstain"
 
     def test_allows_get_namespace(self) -> None:
-        assert hook_mod.evaluate("Bash", {"command": "kubectl get namespace"}, CFG).action == "allow"
+        assert hook_mod.evaluate("Bash", {"command": "kubectl get namespace"}, CFG).action == "abstain"
 
 
 class TestSqlDestructive:
@@ -110,10 +110,10 @@ class TestSqlDestructive:
         assert hook_mod.evaluate("Bash", {"command": "psql -c 'drop table users'"}, CFG).action == "deny"
 
     def test_allows_select(self) -> None:
-        assert hook_mod.evaluate("Bash", {"command": "psql -c 'SELECT * FROM users'"}, CFG).action == "allow"
+        assert hook_mod.evaluate("Bash", {"command": "psql -c 'SELECT * FROM users'"}, CFG).action == "abstain"
 
     def test_allows_create_table(self) -> None:
-        assert hook_mod.evaluate("Bash", {"command": "psql -c 'CREATE TABLE test (id int)'"}, CFG).action == "allow"
+        assert hook_mod.evaluate("Bash", {"command": "psql -c 'CREATE TABLE test (id int)'"}, CFG).action == "abstain"
 
 
 class TestPipeToShell:
@@ -128,10 +128,11 @@ class TestPipeToShell:
 
     def test_allows_curl_to_file(self) -> None:
         d = hook_mod.evaluate("Bash", {"command": "curl -o install.sh http://x.com/install.sh"}, CFG)
-        assert d.action == "allow"
+        assert d.action == "abstain"
 
     def test_allows_curl_pipe_jq(self) -> None:
-        assert hook_mod.evaluate("Bash", {"command": "curl http://api.example.com/data | jq ."}, CFG).action == "allow"
+        d = hook_mod.evaluate("Bash", {"command": "curl http://api.example.com/data | jq ."}, CFG)
+        assert d.action == "abstain"
 
 
 class TestChmod777:
@@ -139,10 +140,10 @@ class TestChmod777:
         assert hook_mod.evaluate("Bash", {"command": "chmod 777 /var/www"}, CFG).action == "deny"
 
     def test_allows_chmod_755(self) -> None:
-        assert hook_mod.evaluate("Bash", {"command": "chmod 755 script.sh"}, CFG).action == "allow"
+        assert hook_mod.evaluate("Bash", {"command": "chmod 755 script.sh"}, CFG).action == "abstain"
 
     def test_allows_chmod_x(self) -> None:
-        assert hook_mod.evaluate("Bash", {"command": "chmod +x script.sh"}, CFG).action == "allow"
+        assert hook_mod.evaluate("Bash", {"command": "chmod +x script.sh"}, CFG).action == "abstain"
 
 
 class TestWriteBlocklist:
@@ -168,22 +169,22 @@ class TestWriteBlocklist:
         assert hook_mod.evaluate("Write", {"file_path": ".ssh/id_rsa"}, CFG).action == "deny"
 
     def test_allows_normal_python(self) -> None:
-        assert hook_mod.evaluate("Write", {"file_path": "src/app/main.py"}, CFG).action == "allow"
+        assert hook_mod.evaluate("Write", {"file_path": "src/app/main.py"}, CFG).action == "abstain"
 
     def test_allows_test_file(self) -> None:
-        assert hook_mod.evaluate("Write", {"file_path": "tests/test_app.py"}, CFG).action == "allow"
+        assert hook_mod.evaluate("Write", {"file_path": "tests/test_app.py"}, CFG).action == "abstain"
 
     def test_allows_yaml(self) -> None:
-        assert hook_mod.evaluate("Write", {"file_path": "k8s/deployment.yaml"}, CFG).action == "allow"
+        assert hook_mod.evaluate("Write", {"file_path": "k8s/deployment.yaml"}, CFG).action == "abstain"
 
     def test_allows_env_in_name_not_extension(self) -> None:
         """File named 'environment.py' should NOT match .env rule."""
-        assert hook_mod.evaluate("Write", {"file_path": "src/environment.py"}, CFG).action == "allow"
+        assert hook_mod.evaluate("Write", {"file_path": "src/environment.py"}, CFG).action == "abstain"
 
     def test_allows_env_example(self) -> None:
         """'.env.example' is a template file, not a real secrets file."""
         d = hook_mod.evaluate("Write", {"file_path": "/app/.env.example"}, CFG)
-        assert d.action == "allow"
+        assert d.action == "abstain"
 
     def test_blocks_env_production(self) -> None:
         d = hook_mod.evaluate("Write", {"file_path": "/app/.env.production"}, CFG)
@@ -205,7 +206,7 @@ class TestAskListCoverage:
 
     def test_kubectl_apply_dev_allowed(self) -> None:
         d = hook_mod.evaluate("Bash", {"command": "kubectl apply -f x.yaml --context=dev-apps"}, CFG)
-        assert d.action == "allow"
+        assert d.action == "abstain"
 
     def test_helm_install_prod_asks(self) -> None:
         d = hook_mod.evaluate("Bash", {"command": "helm install myapp ./chart --kube-context=prod-apps"}, CFG)
@@ -214,7 +215,7 @@ class TestAskListCoverage:
     def test_helm_template_prod_allowed(self) -> None:
         """helm template is read-only, should be allowed even for prod."""
         d = hook_mod.evaluate("Bash", {"command": "helm template myapp ./chart --kube-context=prod-apps"}, CFG)
-        assert d.action == "allow"
+        assert d.action == "abstain"
 
 
 class TestContextScopingCoverage:
@@ -231,13 +232,13 @@ class TestContextScopingCoverage:
 
     def test_staging_context_allowed(self) -> None:
         d = hook_mod.evaluate("Bash", {"command": "kubectl get pods --context=staging-apps"}, CFG)
-        assert d.action == "allow"
+        assert d.action == "abstain"
 
     def test_dev_context_allowed(self) -> None:
         d = hook_mod.evaluate("Bash", {"command": "kubectl apply -f x.yaml --context=dev-apps"}, CFG)
-        assert d.action == "allow"
+        assert d.action == "abstain"
 
     def test_no_context_no_scoping(self) -> None:
         d = hook_mod.evaluate("Bash", {"command": "ls -la"}, CFG)
-        assert d.action == "allow"
+        assert d.action == "abstain"
         assert d.context is None

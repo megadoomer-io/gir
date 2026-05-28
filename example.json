@@ -1,5 +1,5 @@
 {
-  "default": "allow",
+  "default": "abstain",
   "log_file": "~/.config/gir/decisions.jsonl",
   "block": {
     "bash": [

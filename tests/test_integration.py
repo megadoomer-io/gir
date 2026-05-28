@@ -39,14 +39,12 @@ def _run_hook(tool_name: str, tool_input: dict[str, object], config_path: str | 
 class TestHookProtocol:
     def test_exit_code_always_zero(self) -> None:
         result = _run_hook("Bash", {"command": "git status"}, str(EXAMPLE_CONFIG))
-        assert result["output"] is not None
+        assert result["output"] is None  # abstain = no output
 
-    def test_allow_output_format(self) -> None:
+    def test_abstain_produces_no_output(self) -> None:
+        """Default abstain: safe commands produce no output (fall through to built-in)."""
         result = _run_hook("Bash", {"command": "git status"}, str(EXAMPLE_CONFIG))
-        output = result["output"]
-        assert output is not None
-        assert "hookSpecificOutput" in output
-        assert output["hookSpecificOutput"]["permissionDecision"] == "allow"
+        assert result["stdout"] == ""
 
     def test_deny_output_format(self) -> None:
         result = _run_hook("Bash", {"command": "rm -rf /"}, str(EXAMPLE_CONFIG))
@@ -65,7 +63,8 @@ class TestHookProtocol:
         result = _run_hook("Bash", {"command": "git status"}, str(EXAMPLE_CONFIG))
         assert result["stderr"] == "" or "[gir]" in result["stderr"]
 
-    def test_malformed_stdin(self) -> None:
+    def test_malformed_stdin_abstains(self) -> None:
+        """On parse error, GIR abstains (fail-safe, not fail-open)."""
         env = dict(os.environ)
         env["GIR_CONFIG"] = str(EXAMPLE_CONFIG)
         result = subprocess.run(
@@ -77,10 +76,9 @@ class TestHookProtocol:
             env=env,
         )
         assert result.returncode == 0
-        output = json.loads(result.stdout)
-        assert output["hookSpecificOutput"]["permissionDecision"] == "allow"
+        assert result.stdout.strip() == ""
 
-    def test_empty_stdin(self) -> None:
+    def test_empty_stdin_abstains(self) -> None:
         env = dict(os.environ)
         env["GIR_CONFIG"] = str(EXAMPLE_CONFIG)
         result = subprocess.run(
@@ -92,14 +90,12 @@ class TestHookProtocol:
             env=env,
         )
         assert result.returncode == 0
-        output = json.loads(result.stdout)
-        assert output["hookSpecificOutput"]["permissionDecision"] == "allow"
+        assert result.stdout.strip() == ""
 
-    def test_missing_config_still_allows(self) -> None:
+    def test_missing_config_abstains(self) -> None:
+        """Without config, GIR abstains on everything (fail-safe, not fail-open)."""
         result = _run_hook("Bash", {"command": "rm -rf /"}, "/nonexistent/config.json")
-        output = result["output"]
-        assert output is not None
-        assert output["hookSpecificOutput"]["permissionDecision"] == "allow"
+        assert result["stdout"] == ""
 
 
 @pytest.mark.integration
@@ -115,15 +111,14 @@ class TestHookPerformance:
 
 @pytest.mark.integration
 class TestHookCompoundCommands:
-    def test_cd_git_allowed(self) -> None:
+    def test_cd_git_abstains(self) -> None:
+        """Compound cd+git abstains (not blocked) -- falls through to built-in."""
         result = _run_hook(
             "Bash",
             {"command": "cd ~/src/github.com/foo && git log --oneline -3"},
             str(EXAMPLE_CONFIG),
         )
-        output = result["output"]
-        assert output is not None
-        assert output["hookSpecificOutput"]["permissionDecision"] == "allow"
+        assert result["stdout"] == ""
 
     def test_cd_then_dangerous_blocked(self) -> None:
         result = _run_hook(

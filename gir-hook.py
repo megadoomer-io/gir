@@ -36,8 +36,7 @@ def main() -> None:
         payload = json.load(sys.stdin)
     except (json.JSONDecodeError, EOFError) as e:
         print(f"[gir] stdin parse error: {e}", file=sys.stderr)
-        _allow_and_exit()
-        return
+        return  # abstain on error -- fail-safe, falls through to built-in prompt
 
     tool_name = str(payload.get("tool_name", "unknown"))
     tool_input: dict[str, object] = payload.get("tool_input", {})
@@ -68,18 +67,9 @@ def main() -> None:
     # else: exit 0 with no output = hook abstains, falls through to built-in prompt
 
 
-def _allow_and_exit() -> None:
-    print(json.dumps({
-        "hookSpecificOutput": {
-            "hookEventName": "PreToolUse",
-            "permissionDecision": "allow",
-        }
-    }))
-
-
 if __name__ == "__main__":
     try:
         main()
     except Exception as e:
         print(f"[gir] unexpected error: {e}", file=sys.stderr)
-        _allow_and_exit()
+        # abstain on error -- fail-safe, falls through to built-in prompt

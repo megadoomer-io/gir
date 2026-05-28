@@ -115,7 +115,7 @@ def _detect_context(command: str, cfg: config_mod.Config) -> tuple[str, config_m
 def format_output(decision: Decision) -> dict[str, object] | None:
     """Format a decision into Claude Code hook output JSON.
 
-    Returns None for "ask" decisions (hook abstains, falls through to built-in prompt).
+    Returns None for "ask" and "abstain" decisions (hook abstains, falls through to built-in prompt).
     """
     if decision.action == "allow":
         return {
