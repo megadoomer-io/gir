@@ -38,7 +38,7 @@ class ContextScope:
 @dataclass(frozen=True)
 class Config:
     default: str = "allow"
-    log_file: str = "~/.gir/decisions.jsonl"
+    log_file: str = "~/.config/gir/decisions.jsonl"
     block_bash: list[Rule] = field(default_factory=list)
     block_write: list[Rule] = field(default_factory=list)
     ask_bash: list[Rule] = field(default_factory=list)
@@ -47,7 +47,8 @@ class Config:
     @classmethod
     def load(cls, path: str | Path | None = None) -> Config:
         if path is None:
-            path = os.environ.get("GIR_CONFIG", "~/.gir/config.json")
+            xdg = os.environ.get("XDG_CONFIG_HOME", os.path.expanduser("~/.config"))
+            path = os.environ.get("GIR_CONFIG", os.path.join(xdg, "gir", "config.json"))
         resolved = Path(str(path)).expanduser()
         if not resolved.exists():
             print(f"[gir] config not found at {resolved}, using defaults", file=sys.stderr)

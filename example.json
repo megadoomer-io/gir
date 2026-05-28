@@ -1,13 +1,13 @@
 {
   "default": "allow",
-  "log_file": "~/.gir/decisions.jsonl",
+  "log_file": "~/.config/gir/decisions.jsonl",
   "block": {
     "bash": [
-      {"pattern": "rm -rf /", "reason": "Filesystem root removal"},
-      {"pattern": "rm -rf ~", "reason": "Home directory removal"},
+      {"pattern": "rm\\s+-[a-z]*r[a-z]*f[a-z]*\\s+/(\\s|$)", "reason": "Filesystem root removal"},
+      {"pattern": "rm\\s+-[a-z]*r[a-z]*f[a-z]*\\s+~/?\\s*$", "reason": "Home directory removal"},
       {"pattern": "git push.*--force.*(main|master)", "reason": "Force push to main/master"},
       {"pattern": "git reset --hard", "reason": "Destructive git reset"},
-      {"pattern": "kubectl.*(delete|drain).*(namespace|node)", "reason": "Destructive k8s operation"},
+      {"pattern": "kubectl.*(delete|drain).*(namespace|ns|node)\\b", "reason": "Destructive k8s operation"},
       {"pattern": "DROP\\s+(TABLE|DATABASE|SCHEMA)", "reason": "SQL drop"},
       {"pattern": "TRUNCATE\\s+TABLE", "reason": "SQL truncate"},
       {"pattern": "curl.*\\|\\s*(bash|sh|zsh)", "reason": "Pipe to shell"},
@@ -16,7 +16,7 @@
       {"pattern": "> /dev/sd", "reason": "Direct disk write"}
     ],
     "write": [
-      {"pattern": "\\.(env|secret|key|pem)$", "reason": "Secrets file"},
+      {"pattern": "\\.(env|secret|key|pem)(\\.|$)", "reason": "Secrets file"},
       {"pattern": "^/etc/", "reason": "System config"},
       {"pattern": "^\\.ssh/", "reason": "SSH directory"}
     ]
