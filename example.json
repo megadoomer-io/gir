@@ -16,7 +16,7 @@
       {"pattern": "> /dev/sd", "reason": "Direct disk write"}
     ],
     "write": [
-      {"pattern": "\\.(env|secret|key|pem)(\\.|$)", "reason": "Secrets file"},
+      {"pattern": "\\.(env|secret|key|pem)($|\\.(?!example))", "reason": "Secrets file"},
       {"pattern": "^/etc/", "reason": "System config"},
       {"pattern": "^\\.ssh/", "reason": "SSH directory"}
     ]

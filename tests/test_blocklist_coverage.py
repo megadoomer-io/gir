@@ -180,9 +180,13 @@ class TestWriteBlocklist:
         """File named 'environment.py' should NOT match .env rule."""
         assert hook_mod.evaluate("Write", {"file_path": "src/environment.py"}, CFG).action == "allow"
 
-    def test_blocks_env_example(self) -> None:
-        """'.env.example' is also blocked -- template files with secrets patterns are suspicious."""
+    def test_allows_env_example(self) -> None:
+        """'.env.example' is a template file, not a real secrets file."""
         d = hook_mod.evaluate("Write", {"file_path": "/app/.env.example"}, CFG)
+        assert d.action == "allow"
+
+    def test_blocks_env_production(self) -> None:
+        d = hook_mod.evaluate("Write", {"file_path": "/app/.env.production"}, CFG)
         assert d.action == "deny"
 
 
