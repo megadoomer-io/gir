@@ -24,6 +24,13 @@ The PostToolUse observer should extract a **command skeleton** instead:
 - Collapse file paths, version numbers, commit messages into `.*`
 - Keep the command name and subcommand fixed, generalize arguments
 
+Implementation approach:
+- Use `shlex.split()` to tokenize individual command segments (wrap in try/except for complex shell syntax)
+- Heuristic flag detection: tokens starting with `-`/`--` are flags, rest are positional
+- Keep command + subcommand (first 1-2 tokens) fixed, generalize remaining positional args
+- For known commands (git, kubectl, docker, helm), recognize subcommand position for better skeletons
+- `argparse` is NOT suitable here -- it requires pre-defined schemas. Heuristic tokenization is more robust for arbitrary commands.
+
 This is the difference between GIR learning "this exact command" vs "this kind of command."
 
 ### One-time block override
