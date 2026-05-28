@@ -101,7 +101,7 @@ def format_output(decision: Decision) -> dict[str, object] | None:
             "hookSpecificOutput": {
                 "hookEventName": "PreToolUse",
                 "permissionDecision": "deny",
-                "permissionDecisionReason": decision.reason,
+                "permissionDecisionReason": f"GIR: {decision.reason}",
             }
         }
     else:

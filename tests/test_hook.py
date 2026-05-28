@@ -176,7 +176,7 @@ class TestFormatOutput:
         hook_output = out["hookSpecificOutput"]
         assert isinstance(hook_output, dict)
         assert hook_output["permissionDecision"] == "deny"
-        assert hook_output["permissionDecisionReason"] == "too dangerous"
+        assert hook_output["permissionDecisionReason"] == "GIR: too dangerous"
 
     def test_ask_returns_none(self) -> None:
         d = hook_mod.Decision(action="ask")
