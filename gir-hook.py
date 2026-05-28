@@ -25,6 +25,7 @@ sys.path.insert(0, os.path.join(_REPO_ROOT, "src"))
 
 import gir.config as config_mod  # noqa: E402
 import gir.hook as hook_mod  # noqa: E402
+import gir.learned as learned_mod  # noqa: E402
 import gir.log as log_mod  # noqa: E402
 
 
@@ -42,7 +43,10 @@ def main() -> None:
     tool_input: dict[str, object] = payload.get("tool_input", {})
 
     cfg = config_mod.Config.load()
-    decision = hook_mod.evaluate(tool_name, tool_input, cfg)
+    cwd = str(payload.get("cwd", os.getcwd()))
+    project = learned_mod._project_slug(cwd)
+    learned = learned_mod.LearnedStore.load(project_slug=project)
+    decision = hook_mod.evaluate(tool_name, tool_input, cfg, learned=learned)
     output = hook_mod.format_output(decision)
 
     elapsed_ms = (time.monotonic() - start) * 1000
