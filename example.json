@@ -1,0 +1,41 @@
+{
+  "default": "allow",
+  "log_file": "~/.gir/decisions.jsonl",
+  "block": {
+    "bash": [
+      {"pattern": "rm -rf /", "reason": "Filesystem root removal"},
+      {"pattern": "rm -rf ~", "reason": "Home directory removal"},
+      {"pattern": "git push.*--force.*(main|master)", "reason": "Force push to main/master"},
+      {"pattern": "git reset --hard", "reason": "Destructive git reset"},
+      {"pattern": "kubectl.*(delete|drain).*(namespace|node)", "reason": "Destructive k8s operation"},
+      {"pattern": "DROP\\s+(TABLE|DATABASE|SCHEMA)", "reason": "SQL drop"},
+      {"pattern": "TRUNCATE\\s+TABLE", "reason": "SQL truncate"},
+      {"pattern": "curl.*\\|\\s*(bash|sh|zsh)", "reason": "Pipe to shell"},
+      {"pattern": "wget.*\\|\\s*(bash|sh|zsh)", "reason": "Pipe to shell"},
+      {"pattern": "chmod\\s+777", "reason": "World-writable permissions"},
+      {"pattern": "> /dev/sd", "reason": "Direct disk write"}
+    ],
+    "write": [
+      {"pattern": "\\.(env|secret|key|pem)$", "reason": "Secrets file"},
+      {"pattern": "^/etc/", "reason": "System config"},
+      {"pattern": "^\\.ssh/", "reason": "SSH directory"}
+    ]
+  },
+  "ask": {
+    "bash": [
+      {"pattern": "kubectl.*(apply|patch|scale|rollout).*--context=.*(prod|infra-prod)", "reason": "K8s write to production"},
+      {"pattern": "git push.*(main|master)", "reason": "Push to main (non-force)"},
+      {"pattern": "helm (install|upgrade|uninstall).*--(kube-)?context=.*(prod|infra-prod)", "reason": "Helm operation on production"}
+    ]
+  },
+  "contexts": {
+    "production": {
+      "patterns": ["--context=.*prod", "--context=.*infra-prod"],
+      "default": "ask"
+    },
+    "dev": {
+      "patterns": ["--context=.*dev", "--context=.*staging"],
+      "default": "allow"
+    }
+  }
+}
