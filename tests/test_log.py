@@ -116,15 +116,15 @@ class TestLogDecision:
         entry = json.loads(Path(log_file).read_text().splitlines()[0])
         assert entry["duration_ms"] == 3.1
 
-    def test_tilde_expansion(self, tmp_path: Path) -> None:
-        """Verify paths with ~ expand correctly via Path.expanduser()."""
+    def test_tilde_expansion(self, isolated_home: Path) -> None:
+        """Verify ~ expands to the fake home, not the real one."""
         log_mod.log_decision(
-            log_file=str(tmp_path / "tilde-test.jsonl"),
+            log_file="~/.config/gir/tilde-test.jsonl",
             tool="Bash",
             decision="allow",
             rule="default",
         )
-        assert (tmp_path / "tilde-test.jsonl").exists()
+        assert (isolated_home / ".config" / "gir" / "tilde-test.jsonl").exists()
 
     def test_readonly_dir_no_crash(self) -> None:
         log_mod.log_decision(
