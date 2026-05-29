@@ -63,7 +63,7 @@ def _was_ask_decision(tool_name: str, command: str | None, file_path: str | None
             lines = f.readlines()
         for line in reversed(lines[-50:]):
             entry = json.loads(line)
-            if entry.get("decision") != "ask":
+            if entry.get("decision") not in ("ask", "abstain"):
                 continue
             if entry.get("tool") != tool_name:
                 continue
