@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import TYPE_CHECKING
 
 import gir.config as config_mod
@@ -10,6 +11,7 @@ if TYPE_CHECKING:
     from pathlib import Path
 import gir.hook as hook_mod
 import gir.learned as learned_mod
+import gir.skeleton as skeleton_mod
 from tests.conftest import EXAMPLE_CONFIG
 
 
@@ -161,3 +163,74 @@ class TestLearnedIntegration:
         d = hook_mod.evaluate("Bash", {"command": "kubectl get pods --context=prod-apps"}, cfg, learned=store)
         assert d.action == "allow"
         assert "learned" in d.rule
+
+
+class TestSkeletonBasedLearning:
+    """Test that skeleton patterns work with the learned approval system."""
+
+    def test_skeleton_matches_future_invocations(self) -> None:
+        skeleton = skeleton_mod.extract_skeleton("git commit -m 'initial'")
+        approval = learned_mod.LearnedApproval(tool="Bash", pattern=skeleton, scope="test", source="user-approved")
+        assert approval.matches("Bash", "git commit -m 'different message'")
+        assert approval.matches("Bash", "git commit --amend")
+        assert approval.matches("Bash", "git commit")
+
+    def test_skeleton_rejects_wrong_command(self) -> None:
+        skeleton = skeleton_mod.extract_skeleton("git commit -m 'msg'")
+        approval = learned_mod.LearnedApproval(tool="Bash", pattern=skeleton, scope="test", source="user-approved")
+        assert not approval.matches("Bash", "git push origin main")
+        assert not approval.matches("Bash", "kubectl get pods")
+
+    def test_skeleton_word_boundary(self) -> None:
+        skeleton = skeleton_mod.extract_skeleton("git commit -m 'msg'")
+        approval = learned_mod.LearnedApproval(tool="Bash", pattern=skeleton, scope="test", source="user-approved")
+        assert not approval.matches("Bash", "git committed")
+
+    def test_old_exact_patterns_still_work(self) -> None:
+        old_pattern = re.escape("git push origin main")
+        approval = learned_mod.LearnedApproval(tool="Bash", pattern=old_pattern, scope="test", source="user-approved")
+        assert approval.matches("Bash", "git push origin main")
+        assert not approval.matches("Bash", "git push origin develop")
+
+    def test_skeleton_overrides_ask_in_hook(self) -> None:
+        cfg = config_mod.Config.load(EXAMPLE_CONFIG)
+        skeleton = skeleton_mod.extract_skeleton("git push origin main")
+        store = learned_mod.LearnedStore(
+            approvals=[learned_mod.LearnedApproval(tool="Bash", pattern=skeleton, scope="test", source="user-approved")]
+        )
+        d = hook_mod.evaluate("Bash", {"command": "git push origin develop"}, cfg, learned=store)
+        assert d.action == "allow"
+        assert "learned" in d.rule
+
+    def test_skeleton_stored_and_retrieved(self, tmp_path: Path) -> None:
+        skeleton = skeleton_mod.extract_skeleton("uv run pytest -q --tb=short")
+        store = learned_mod.LearnedStore()
+        store.record_approval(tool="Bash", pattern=skeleton, scope="test-project", config_dir=tmp_path)
+
+        loaded = learned_mod.LearnedStore.load(project_slug="test-project", config_dir=tmp_path)
+        assert len(loaded.approvals) == 1
+        result = loaded.check("Bash", "uv run pytest -v --cov=src")
+        assert result is not None
+
+    def test_kubectl_skeleton_resource_specific(self) -> None:
+        skeleton = skeleton_mod.extract_skeleton("kubectl get pods -n default")
+        store = learned_mod.LearnedStore(
+            approvals=[learned_mod.LearnedApproval(tool="Bash", pattern=skeleton, scope="test", source="user-approved")]
+        )
+        assert store.check("Bash", "kubectl get pods -n kube-system") is not None
+        assert store.check("Bash", "kubectl get deployments") is None
+
+    def test_compound_command_per_segment_matching(self) -> None:
+        git_add_skel = skeleton_mod.extract_skeleton("git add")
+        git_commit_skel = skeleton_mod.extract_skeleton("git commit -m 'msg'")
+        store = learned_mod.LearnedStore(
+            approvals=[
+                learned_mod.LearnedApproval(tool="Bash", pattern=git_add_skel, scope="test", source="user-approved"),
+                learned_mod.LearnedApproval(
+                    tool="Bash", pattern=git_commit_skel, scope="test", source="user-approved"
+                ),
+            ]
+        )
+        assert store.check("Bash", "git add README.md CHANGELOG.md") is not None
+        assert store.check("Bash", "git commit -m 'totally new message'") is not None
+        assert store.check("Bash", "git push origin main") is None

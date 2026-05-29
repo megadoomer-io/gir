@@ -30,22 +30,10 @@ import sys
 _REPO_ROOT = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(_REPO_ROOT, "src"))
 
+import gir.decompose as decompose_mod  # noqa: E402
 import gir.learned as learned_mod  # noqa: E402
 import gir.log as log_mod  # noqa: E402
-
-
-def _generalize_command(command: str) -> str:
-    """Turn a specific command into a reusable pattern.
-
-    Examples:
-        "git push origin main" -> "git push origin main"  (kept specific -- ask-list item)
-        "kubectl apply -f deploy.yaml --context=prod" -> "kubectl apply .* --context=prod"
-        "npm test -- --watch" -> "npm test .*"
-    """
-    # For now, keep the command as-is as the pattern.
-    # The user approved THIS command, so match it exactly.
-    # Future: smarter generalization (collapse file paths, version numbers, etc.)
-    return re.escape(command)
+import gir.skeleton as skeleton_mod  # noqa: E402
 
 
 def _was_ask_decision(tool_name: str, command: str | None, file_path: str | None, log_file: str) -> bool:
@@ -102,26 +90,32 @@ def main() -> None:
 
     # The user approved an ask-list item -- record it
     project = learned_mod._project_slug(cwd)
-    pattern = _generalize_command(value)
     store = learned_mod.LearnedStore()
 
-    print(f"[gir] learning: {tool_name} pattern '{value}' for project '{project}'", file=sys.stderr)
-
-    store.record_approval(
-        tool=tool_name,
-        pattern=pattern,
-        scope=project,
-        source="user-approved",
-    )
-
-    log_mod.log_decision(
-        log_file=log_file,
-        tool=tool_name,
-        decision="learned",
-        rule=f"user-approved:{pattern}",
-        command=command,
-        file_path=file_path,
-    )
+    if command:
+        segments = decompose_mod.decompose(command)
+        for segment in segments:
+            skel = skeleton_mod.extract_skeleton(segment)
+            print(f"[gir] learning: Bash skeleton '{skel}' from '{segment}' for project '{project}'", file=sys.stderr)
+            store.record_approval(tool="Bash", pattern=skel, scope=project, source="user-approved")
+            log_mod.log_decision(
+                log_file=log_file,
+                tool="Bash",
+                decision="learned",
+                rule=f"user-approved:{skel}",
+                command=segment,
+            )
+    elif file_path:
+        pattern = re.escape(file_path)
+        print(f"[gir] learning: {tool_name} pattern '{pattern}' for project '{project}'", file=sys.stderr)
+        store.record_approval(tool=tool_name, pattern=pattern, scope=project, source="user-approved")
+        log_mod.log_decision(
+            log_file=log_file,
+            tool=tool_name,
+            decision="learned",
+            rule=f"user-approved:{pattern}",
+            file_path=file_path,
+        )
 
 
 if __name__ == "__main__":
